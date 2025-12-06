@@ -58,31 +58,45 @@ if (!$user_id) {
 try {
     // Démarrer une transaction
     $pdo->beginTransaction();
-    
+
     // Insérer le sondage dans la table form
     $stmt = $pdo->prepare('INSERT INTO form (title, description) VALUES (?, ?)');
     $stmt->execute([$title, $description]);
     $form_id = $pdo->lastInsertId();
-    
+
     // Insérer chaque question dans la table question
-    $stmt = $pdo->prepare('INSERT INTO question (form_id, question_text) VALUES (?, ?)');
-    foreach ($questions as $question_text) {
-        $question_text = trim($question_text);
+    $stmtQuestion = $pdo->prepare('INSERT INTO question (form_id, question_text, type) VALUES (?, ?, ?)');
+    $stmtOption = $pdo->prepare('INSERT INTO question_option (question_id, option_text) VALUES (?, ?)');
+
+    foreach ($questions as $question) {
+        $question_text = trim($question['question_text']);
+        $question_type = isset($question['type']) ? $question['type'] : 'text';
+
         if (!empty($question_text)) {
-            $stmt->execute([$form_id, $question_text]);
+            $stmtQuestion->execute([$form_id, $question_text, $question_type]);
+            $question_id = $pdo->lastInsertId();
+
+            // Si c'est un choix multiple, insérer les options
+            if ($question_type === 'multiple' && isset($question['options']) && is_array($question['options'])) {
+                foreach ($question['options'] as $option_text) {
+                    $option_text = trim($option_text);
+                    if (!empty($option_text)) {
+                        $stmtOption->execute([$question_id, $option_text]);
+                    }
+                }
+            }
         }
     }
-    
+
     // Valider la transaction
     $pdo->commit();
-    
+
     header('Content-Type: application/json');
     echo json_encode([
         'success' => true,
         'form_id' => $form_id,
         'message' => 'Sondage créé avec succès'
     ]);
-    
 } catch (PDOException $e) {
     // Annuler la transaction en cas d'erreur
     $pdo->rollBack();

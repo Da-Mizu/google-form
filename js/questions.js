@@ -72,14 +72,43 @@ if (formId) {
                         // Question
                         const questionDiv = document.createElement('div');
                         questionDiv.textContent = q.question_text;
+                        questionDiv.className = 'fw-bold mb-2';
                         li.appendChild(questionDiv);
-                        // Textarea réponse
-                        const textarea = document.createElement('textarea');
-                        textarea.className = 'form-control mt-2';
-                        textarea.rows = 3;
-                        textarea.name = `answer_${q.id}`;
-                        textarea.setAttribute('data-question-id', q.id);
-                        li.appendChild(textarea);
+                        
+                        // Selon le type de question, créer le bon input
+                        if (q.type === 'multiple' && q.options && q.options.length > 0) {
+                            // Choix multiple : radio buttons
+                            q.options.forEach((option, index) => {
+                                const optionDiv = document.createElement('div');
+                                optionDiv.className = 'form-check';
+                                
+                                const radio = document.createElement('input');
+                                radio.type = 'radio';
+                                radio.className = 'form-check-input';
+                                radio.name = `answer_${q.id}`;
+                                radio.value = option;
+                                radio.id = `answer_${q.id}_${index}`;
+                                radio.setAttribute('data-question-id', q.id);
+                                
+                                const label = document.createElement('label');
+                                label.className = 'form-check-label';
+                                label.htmlFor = `answer_${q.id}_${index}`;
+                                label.textContent = option;
+                                
+                                optionDiv.appendChild(radio);
+                                optionDiv.appendChild(label);
+                                li.appendChild(optionDiv);
+                            });
+                        } else {
+                            // Texte libre : textarea
+                            const textarea = document.createElement('textarea');
+                            textarea.className = 'form-control mt-2';
+                            textarea.rows = 3;
+                            textarea.name = `answer_${q.id}`;
+                            textarea.setAttribute('data-question-id', q.id);
+                            li.appendChild(textarea);
+                        }
+                        
                         list.appendChild(li);
                     });
                 }
@@ -93,9 +122,16 @@ if (formId) {
         // Gestion de la soumission du formulaire
         document.getElementById('answerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const inputs = document.querySelectorAll('#questionList textarea[data-question-id]');
+            
+            // Récupérer toutes les réponses (textareas et radio buttons)
+            const textareas = document.querySelectorAll('#questionList textarea[data-question-id]');
+            const radioGroups = document.querySelectorAll('#questionList input[type="radio"][data-question-id]');
+            
             let hasError = false;
-            for (const input of inputs) {
+            const processedQuestions = new Set();
+            
+            // Traiter les textareas (texte libre)
+            for (const input of textareas) {
                 const answer = input.value.trim();
                 const questionId = input.getAttribute('data-question-id');
                 if (answer) {
@@ -106,6 +142,39 @@ if (formId) {
                             body: JSON.stringify({ question_id: questionId, answer_text: answer, user_id: userId })
                         });
                         console.log('Envoi de la réponse pour la question ID :', questionId, 'Réponse :', answer, 'User ID :', userId);
+                        const result = await response.json();
+                        if (!result.success) hasError = true;
+                        processedQuestions.add(questionId);
+                    } catch {
+                        hasError = true;
+                    }
+                }
+            }
+            
+            // Traiter les radio buttons (choix multiple)
+            const radioQuestions = {};
+            radioGroups.forEach(radio => {
+                const questionId = radio.getAttribute('data-question-id');
+                if (!radioQuestions[questionId]) {
+                    radioQuestions[questionId] = [];
+                }
+                radioQuestions[questionId].push(radio);
+            });
+            
+            for (const questionId in radioQuestions) {
+                if (processedQuestions.has(questionId)) continue;
+                
+                const radios = radioQuestions[questionId];
+                const selected = radios.find(r => r.checked);
+                
+                if (selected) {
+                    try {
+                        const response = await fetch('http://localhost/google-form/php/save_answer.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ question_id: questionId, answer_text: selected.value, user_id: userId })
+                        });
+                        console.log('Envoi de la réponse pour la question ID :', questionId, 'Réponse :', selected.value, 'User ID :', userId);
                         const result = await response.json();
                         if (!result.success) hasError = true;
                     } catch {

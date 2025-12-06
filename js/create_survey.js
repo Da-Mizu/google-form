@@ -28,43 +28,101 @@ renderNavbarUserActions();
 const questionsContainer = document.getElementById('questionsContainer');
 
 function updateQuestionLabels() {
-    const questionInputs = questionsContainer.querySelectorAll('.question-input');
-    questionInputs.forEach((div, index) => {
-        const label = div.querySelector('label');
+    const questionBlocks = questionsContainer.querySelectorAll('.question-block');
+    questionBlocks.forEach((div, index) => {
+        const label = div.querySelector('label.fw-bold');
         label.textContent = `Question ${index + 1}`;
     });
 }
 
-function checkAndAddInput() {
-    const allInputs = questionsContainer.querySelectorAll('.question-field');
-    const emptyInputs = Array.from(allInputs).filter(input => input.value.trim() === '');
+function checkAndAddOptionInput(optionInputsContainer) {
+    const allOptions = optionInputsContainer.querySelectorAll('.option-field');
+    const emptyOptions = Array.from(allOptions).filter(input => input.value.trim() === '');
     
     // Si il ne reste qu'un seul input vide, on en ajoute un nouveau
-    if (emptyInputs.length === 1) {
-        const newDiv = document.createElement('div');
-        newDiv.className = 'mb-3 question-input';
-        
-        const newLabel = document.createElement('label');
-        newLabel.className = 'form-label';
-        newLabel.textContent = `Question ${allInputs.length + 1}`;
-        
+    if (emptyOptions.length === 1) {
         const newInput = document.createElement('input');
         newInput.type = 'text';
-        newInput.className = 'form-control question-field';
-        newInput.placeholder = 'Entrez votre question';
-        
-        newDiv.appendChild(newLabel);
-        newDiv.appendChild(newInput);
-        questionsContainer.appendChild(newDiv);
+        newInput.className = 'form-control mb-2 option-field';
+        newInput.placeholder = `Option ${allOptions.length + 1}`;
+        optionInputsContainer.appendChild(newInput);
         
         // Ajouter l'event listener au nouvel input
-        newInput.addEventListener('input', checkAndAddInput);
+        newInput.addEventListener('input', () => checkAndAddOptionInput(optionInputsContainer));
     }
 }
 
-// Ajouter les event listeners aux inputs initiaux
-questionsContainer.querySelectorAll('.question-field').forEach(input => {
-    input.addEventListener('input', checkAndAddInput);
+function toggleOptionsContainer(questionBlock) {
+    const typeSelect = questionBlock.querySelector('.question-type');
+    const optionsContainer = questionBlock.querySelector('.options-container');
+    
+    if (typeSelect.value === 'multiple') {
+        optionsContainer.style.display = 'block';
+        // Initialiser les event listeners pour les options
+        const optionInputsContainer = optionsContainer.querySelector('.option-inputs');
+        optionInputsContainer.querySelectorAll('.option-field').forEach(input => {
+            input.addEventListener('input', () => checkAndAddOptionInput(optionInputsContainer));
+        });
+    } else {
+        optionsContainer.style.display = 'none';
+    }
+}
+
+function checkAndAddQuestionBlock() {
+    const allQuestions = questionsContainer.querySelectorAll('.question-field');
+    const emptyQuestions = Array.from(allQuestions).filter(input => input.value.trim() === '');
+    
+    // Si il ne reste qu'un seul input vide, on en ajoute un nouveau
+    if (emptyQuestions.length === 1) {
+        const newBlock = document.createElement('div');
+        newBlock.className = 'mb-4 question-block border p-3 rounded';
+        
+        const newLabel = document.createElement('label');
+        newLabel.className = 'form-label fw-bold';
+        newLabel.textContent = `Question ${allQuestions.length + 1}`;
+        
+        const newInput = document.createElement('input');
+        newInput.type = 'text';
+        newInput.className = 'form-control mb-2 question-field';
+        newInput.placeholder = 'Entrez votre question';
+        
+        const newSelect = document.createElement('select');
+        newSelect.className = 'form-select mb-2 question-type';
+        newSelect.innerHTML = `
+            <option value="text">Texte libre</option>
+            <option value="multiple">Choix multiple</option>
+        `;
+        
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'options-container';
+        optionsContainer.style.display = 'none';
+        optionsContainer.innerHTML = `
+            <label class="form-label small">Options de réponse :</label>
+            <div class="option-inputs">
+                <input type="text" class="form-control mb-2 option-field" placeholder="Option 1" />
+                <input type="text" class="form-control mb-2 option-field" placeholder="Option 2" />
+            </div>
+        `;
+        
+        newBlock.appendChild(newLabel);
+        newBlock.appendChild(newInput);
+        newBlock.appendChild(newSelect);
+        newBlock.appendChild(optionsContainer);
+        questionsContainer.appendChild(newBlock);
+        
+        // Ajouter les event listeners
+        newInput.addEventListener('input', checkAndAddQuestionBlock);
+        newSelect.addEventListener('change', () => toggleOptionsContainer(newBlock));
+    }
+}
+
+// Initialiser les event listeners pour les blocs existants
+questionsContainer.querySelectorAll('.question-block').forEach(block => {
+    const questionField = block.querySelector('.question-field');
+    const typeSelect = block.querySelector('.question-type');
+    
+    questionField.addEventListener('input', checkAndAddQuestionBlock);
+    typeSelect.addEventListener('change', () => toggleOptionsContainer(block));
 });
 
 // Gestion de la soumission du formulaire
@@ -81,16 +139,46 @@ document.getElementById('createSurveyForm').addEventListener('submit', async fun
     const description = document.getElementById('surveyDescription').value.trim();
     const message = document.getElementById('createMessage');
     
-    // Récupérer toutes les questions non vides
-    const questionInputs = questionsContainer.querySelectorAll('.question-field');
-    const questions = Array.from(questionInputs)
-        .map(input => input.value.trim())
-        .filter(q => q !== '');
+    // Récupérer toutes les questions avec leur type et options
+    const questionBlocks = questionsContainer.querySelectorAll('.question-block');
+    const questions = [];
+    
+    questionBlocks.forEach(block => {
+        const questionText = block.querySelector('.question-field').value.trim();
+        const questionType = block.querySelector('.question-type').value;
+        
+        if (questionText !== '') {
+            const questionData = {
+                question_text: questionText,
+                type: questionType
+            };
+            
+            // Si c'est un choix multiple, récupérer les options non vides
+            if (questionType === 'multiple') {
+                const optionInputs = block.querySelectorAll('.option-field');
+                const options = Array.from(optionInputs)
+                    .map(input => input.value.trim())
+                    .filter(opt => opt !== '');
+                questionData.options = options;
+            }
+            
+            questions.push(questionData);
+        }
+    });
     
     if (questions.length === 0) {
         message.style.color = '#dc3545';
         message.textContent = 'Vous devez ajouter au moins une question.';
         return;
+    }
+    
+    // Vérifier que les questions à choix multiple ont au moins 2 options
+    for (const q of questions) {
+        if (q.type === 'multiple' && (!q.options || q.options.length < 2)) {
+            message.style.color = '#dc3545';
+            message.textContent = 'Les questions à choix multiple doivent avoir au moins 2 options.';
+            return;
+        }
     }
     
     message.textContent = '';

@@ -37,11 +37,20 @@ if (!is_numeric($form_id) || intval($form_id) <= 0) {
     exit;
 }
 
-$stmt = $pdo->prepare('SELECT id, question_text FROM question WHERE form_id = ?');
+// Récupérer les questions avec leur type
+$stmt = $pdo->prepare('SELECT id, question_text, type FROM question WHERE form_id = ?');
 $stmt->execute([intval($form_id)]);
 $questions = $stmt->fetchAll();
 
+// Pour chaque question à choix multiple, récupérer les options
+$stmtOptions = $pdo->prepare('SELECT option_text FROM question_option WHERE question_id = ?');
+foreach ($questions as &$question) {
+    if ($question['type'] === 'multiple') {
+        $stmtOptions->execute([$question['id']]);
+        $question['options'] = $stmtOptions->fetchAll(PDO::FETCH_COLUMN);
+    }
+}
+
 header('Content-Type: application/json');
-// Authentification requise (optionnel)
 // Authentification déléguée au client (localStorage)
 echo json_encode($questions);
