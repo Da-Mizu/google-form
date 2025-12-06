@@ -110,6 +110,9 @@ if (formId) {
             }
             if (!hasError) {
                 alert('Réponses enregistrées avec succès !');
+                setTimeout(() => {
+                    window.location.href = 'home.html';
+                }, 1500);
             } else {
                 alert('Erreur lors de l\'enregistrement de certaines réponses.');
             }
