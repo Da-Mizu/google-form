@@ -1,7 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: GET, OPTIONS");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
@@ -29,8 +29,28 @@ try {
 }
 
 
-$stmt = $pdo->prepare('SELECT id, title, description FROM form');
-$stmt->execute();
+// Récupérer l'ID utilisateur depuis le body de la requête POST
+$input = json_decode(file_get_contents('php://input'), true);
+$user_id = isset($input['user_id']) ? intval($input['user_id']) : null;
+
+if ($user_id) {
+    // Récupérer uniquement les sondages auxquels l'utilisateur n'a pas encore répondu
+    $stmt = $pdo->prepare('
+        SELECT DISTINCT f.id, f.title, f.description 
+        FROM form f
+        WHERE f.id NOT IN (
+            SELECT DISTINCT q.form_id 
+            FROM answer a
+            JOIN question q ON a.question_id = q.id
+            WHERE a.user_id = ?
+        )
+    ');
+    $stmt->execute([$user_id]);
+} else {
+    // Si pas d'utilisateur, retourner tous les sondages
+    $stmt = $pdo->prepare('SELECT id, title, description FROM form');
+    $stmt->execute();
+}
 $sondages = $stmt->fetchAll();
 
 header('Content-Type: application/json');

@@ -29,10 +29,22 @@ function renderNavbarUserActions() {
 renderNavbarUserActions();
 
 const list = document.getElementById('questionnaireList');
+const userId = localStorage.getItem('user_id');
 
-fetch('http://localhost/google-form/php/get_sondage.php')
+fetch('http://localhost/google-form/php/get_sondage.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId })
+})
     .then(response => response.json())
     .then(data => {
+        if (data.length === 0) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item text-warning';
+            li.textContent = 'Aucun sondage disponible ou vous avez déjà répondu à tous les sondages.';
+            list.appendChild(li);
+            return;
+        }
         data.forEach(sondage => {
             const li = document.createElement('li');
             li.className = 'list-group-item list-group-item-action';
