@@ -103,6 +103,28 @@ function renderAnswers(questions) {
         cardBody.className = 'card-body';
         
         if (question.answers && question.answers.length > 0) {
+            // Vérifier si on peut créer un camembert
+            const canCreatePieChart = !question.answers.some(a => a.masked) && question.answers.length > 0;
+            
+            if (canCreatePieChart) {
+                // Créer le conteneur du graphique
+                const chartContainer = document.createElement('div');
+                chartContainer.className = 'mb-4';
+                chartContainer.style.maxWidth = '400px';
+                chartContainer.style.margin = '0 auto';
+                
+                const canvas = document.createElement('canvas');
+                canvas.id = `chart-${index}`;
+                chartContainer.appendChild(canvas);
+                cardBody.appendChild(chartContainer);
+                
+                // Créer le camembert après l'insertion dans le DOM
+                setTimeout(() => {
+                    createPieChart(`chart-${index}`, question.answers);
+                }, 100);
+            }
+            
+            // Afficher aussi la liste des réponses
             const answersList = document.createElement('ul');
             answersList.className = 'list-group list-group-flush';
             
@@ -137,5 +159,89 @@ function renderAnswers(questions) {
         questionDiv.appendChild(cardHeader);
         questionDiv.appendChild(cardBody);
         answersContainer.appendChild(questionDiv);
+    });
+}
+
+function createPieChart(canvasId, answers) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    // Compter les occurrences de chaque réponse
+    const answerCounts = {};
+    answers.forEach(answer => {
+        const text = answer.answer_text || 'Sans réponse';
+        answerCounts[text] = (answerCounts[text] || 0) + 1;
+    });
+    
+    // Préparer les données pour le graphique
+    const labels = Object.keys(answerCounts);
+    const data = Object.values(answerCounts);
+    
+    // Palette de couleurs
+    const backgroundColors = [
+        'rgba(255, 99, 132, 0.7)',
+        'rgba(54, 162, 235, 0.7)',
+        'rgba(255, 206, 86, 0.7)',
+        'rgba(75, 192, 192, 0.7)',
+        'rgba(153, 102, 255, 0.7)',
+        'rgba(255, 159, 64, 0.7)',
+        'rgba(199, 199, 199, 0.7)',
+        'rgba(83, 102, 255, 0.7)',
+        'rgba(255, 99, 255, 0.7)',
+        'rgba(99, 255, 132, 0.7)'
+    ];
+    
+    const borderColors = [
+        'rgba(255, 99, 132, 1)',
+        'rgba(54, 162, 235, 1)',
+        'rgba(255, 206, 86, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(153, 102, 255, 1)',
+        'rgba(255, 159, 64, 1)',
+        'rgba(199, 199, 199, 1)',
+        'rgba(83, 102, 255, 1)',
+        'rgba(255, 99, 255, 1)',
+        'rgba(99, 255, 132, 1)'
+    ];
+    
+    // Créer le graphique
+    new Chart(canvas, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Nombre de réponses',
+                data: data,
+                backgroundColor: backgroundColors.slice(0, labels.length),
+                borderColor: borderColors.slice(0, labels.length),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
     });
 }
