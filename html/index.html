@@ -11,12 +11,6 @@
     <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="home.html">Google Form Clone</a>
-        <div class="d-flex ms-auto" id="navbarUserActions"></div>
-      </div>
-    </nav>
     <div
       class="container d-flex justify-content-center align-items-center min-vh-100"
       style="padding-top: 70px"
@@ -43,37 +37,7 @@
       </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/navbar.js"></script>
     <script src="../js/script.js"></script>
-    <script>
-      // Navbar user actions
-      function renderNavbarUserActions() {
-        const navbar = document.getElementById("navbarUserActions");
-        if (!navbar) return;
-        navbar.innerHTML = "";
-        const userId = localStorage.getItem("user_id");
-        if (userId) {
-          const logoutBtn = document.createElement("button");
-          logoutBtn.className = "btn btn-outline-light ms-2";
-          logoutBtn.textContent = "Logout";
-          logoutBtn.onclick = function () {
-            localStorage.removeItem("user_id");
-            window.location.href = "index.html";
-          };
-          navbar.appendChild(logoutBtn);
-        } else {
-          const registerBtn = document.createElement("a");
-          registerBtn.className = "btn btn-outline-light ms-2";
-          registerBtn.textContent = "Register";
-          registerBtn.href = "register.html";
-          const loginBtn = document.createElement("a");
-          loginBtn.className = "btn btn-light ms-2";
-          loginBtn.textContent = "Login";
-          loginBtn.href = "index.html";
-          navbar.appendChild(registerBtn);
-          navbar.appendChild(loginBtn);
-        }
-      }
-      renderNavbarUserActions();
-    </script>
   </body>
 </html>

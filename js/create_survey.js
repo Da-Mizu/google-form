@@ -1,29 +1,3 @@
-// Navbar user actions
-function renderNavbarUserActions() {
-    const navbar = document.getElementById('navbarUserActions');
-    if (!navbar) return;
-    navbar.innerHTML = '';
-    const userId = localStorage.getItem('user_id');
-    if (userId) {
-        const createBtn = document.createElement('a');
-        createBtn.className = 'btn btn-success ms-2';
-        createBtn.textContent = 'Create';
-        createBtn.href = 'create_survey.html';
-        navbar.appendChild(createBtn);
-        const logoutBtn = document.createElement('button');
-        logoutBtn.className = 'btn btn-outline-light ms-2';
-        logoutBtn.textContent = 'Logout';
-        logoutBtn.onclick = function() {
-            localStorage.removeItem('user_id');
-            window.location.href = 'index.html';
-        };
-        navbar.appendChild(logoutBtn);
-    } else {
-        window.location.href = 'index.html';
-    }
-}
-renderNavbarUserActions();
-
 // Gestion dynamique des inputs de questions
 const questionsContainer = document.getElementById('questionsContainer');
 

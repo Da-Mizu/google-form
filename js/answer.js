@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Récupérer les informations utilisateur depuis localStorage
     const userId = localStorage.getItem('user_id');
-    const username = localStorage.getItem('username');
     
     // Récupérer le form_id depuis l'URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -11,17 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const answerTitle = document.getElementById('answerTitle');
     const answerMessage = document.getElementById('answerMessage');
     const answersContainer = document.getElementById('answersContainer');
-    const navbarUserActions = document.getElementById('navbarUserActions');
-    
-    // Afficher le nom d'utilisateur dans la navbar
-    if (username && navbarUserActions) {
-        navbarUserActions.innerHTML = `
-            <div id="navbarCenter" class="mx-auto">
-                <span class="navbar-text">Bonjour, ${username}</span>
-            </div>
-            <button class="btn btn-outline-danger btn-sm" onclick="logout()">Déconnexion</button>
-        `;
-    }
     
     // Vérifier que l'utilisateur est connecté
     if (!userId) {
@@ -150,9 +138,4 @@ function renderAnswers(questions) {
         questionDiv.appendChild(cardBody);
         answersContainer.appendChild(questionDiv);
     });
-}
-
-function logout() {
-    localStorage.clear();
-    window.location.href = 'index.html';
 }
