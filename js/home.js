@@ -74,14 +74,42 @@ fetch('http://localhost/google-form/php/get_sondage.php', {
             // Colonne droite : bouton "Voir résultats" si l'utilisateur est propriétaire
             if (userId && sondage.user_id && parseInt(sondage.user_id) === parseInt(userId)) {
                 const btnDiv = document.createElement('div');
-                btnDiv.className = 'ms-3';
+                btnDiv.className = 'ms-3 d-flex gap-2';
                 
                 const resultBtn = document.createElement('a');
                 resultBtn.className = 'btn btn-sm btn-outline-primary';
                 resultBtn.textContent = 'Voir résultats';
                 resultBtn.href = `answer.html?form_id=${sondage.id}`;
                 
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-sm btn-danger';
+                deleteBtn.textContent = 'Supprimer';
+                deleteBtn.addEventListener('click', async () => {
+                    if (confirm('Êtes-vous sûr de vouloir supprimer ce sondage ? Cette action est irréversible.')) {
+                        try {
+                            const response = await fetch('http://localhost/google-form/php/delete_survey.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                    form_id: sondage.id,
+                                    user_id: userId
+                                })
+                            });
+                            const result = await response.json();
+                            if (result.success) {
+                                alert('Sondage supprimé avec succès !');
+                                location.reload();
+                            } else {
+                                alert('Erreur : ' + result.error);
+                            }
+                        } catch (error) {
+                            alert('Erreur lors de la suppression.');
+                        }
+                    }
+                });
+                
                 btnDiv.appendChild(resultBtn);
+                btnDiv.appendChild(deleteBtn);
                 contentDiv.appendChild(btnDiv);
             }
             
