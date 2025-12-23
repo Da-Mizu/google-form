@@ -1,96 +1,95 @@
-
 # Google Form Clone
 
-Application web de gestion de sondages (login, inscription, réponses, affichage dynamique, création de sondages) avec HTML, CSS, JavaScript, PHP, MySQL et Bootstrap.
+Application web complète de gestion de sondages développée avec HTML, CSS, JavaScript, PHP, MySQL et Bootstrap. Cette application permet la création de sondages personnalisés, l'inscription et l'authentification des utilisateurs, ainsi que la collecte et l'affichage dynamique des réponses.
 
 **Dernières mises à jour :**
 
-- Organisation complète du projet : fichiers HTML dans `/html`, fichiers JS dans `/js`, endpoints PHP dans `/php`
-- **Types de questions** : support des questions à texte libre ET à choix multiple (radio buttons)
-- **Création de sondages** : formulaire dynamique avec ajout automatique de questions et d'options
-- Filtrage intelligent : les sondages auxquels l'utilisateur a déjà répondu ne s'affichent plus dans la liste
+- Organisation complète du projet avec séparation claire : fichiers HTML dans `/html`, fichiers JavaScript dans `/js`, endpoints PHP dans `/php`
+- **Support multi-types de questions** : implémentation des questions à texte libre ET à choix multiple avec radio buttons
+- **Interface de création dynamique** : formulaire intuitif permettant l'ajout automatique de questions et d'options personnalisables
+- Filtrage intelligent des sondages : les sondages déjà complétés par l'utilisateur sont automatiquement masqués de la liste
 - Redirection automatique vers la liste des sondages après soumission des réponses
-- Envoi sécurisé de `user_id` en POST (body JSON) au lieu de GET (URL)
-- Headers CORS présents sur tous les endpoints PHP
-- Vérification de l'authentification côté JavaScript avant les appels sensibles
+- Sécurisation renforcée : envoi de `user_id` en POST (body JSON) au lieu de GET (URL)
+- Configuration CORS complète sur l'ensemble des endpoints PHP
+- Vérification systématique de l'authentification côté JavaScript avant les appels sensibles
 
 ## Fonctionnalités principales
 
-- **Authentification sécurisée** : inscription, login, logout avec mots de passe hashés
-- **Création de sondages** : formulaire dynamique avec choix du type de question (texte libre / choix multiple)
-- **Types de questions** : 
-  - Texte libre avec textarea
-  - Choix multiple avec radio buttons et options personnalisables
-  - Ajout automatique d'inputs pour questions et options (même principe que Google Forms)
-- **Réponse aux sondages** : affichage adapté selon le type de question, persistance des réponses
-- **Filtrage intelligent** : masquage des sondages déjà complétés par l'utilisateur
-- **Limitation des tentatives de login** : système anti-bruteforce avec table `login_attempts`
-- **Protection contre les injections SQL** : requêtes préparées partout
-- **Navbar dynamique** : boutons adaptés selon l'état de connexion (Create, Logout, Register, Login)
-- **Redirection automatique** : retour à la liste après soumission de réponses
+- **Authentification sécurisée** : système complet d'inscription, connexion et déconnexion avec mots de passe hashés selon les standards de sécurité
+- **Création de sondages avancée** : interface dynamique permettant de choisir le type de question (texte libre ou choix multiple)
+- **Types de questions supportés** : 
+  - Questions à texte libre avec zone de saisie textarea
+  - Questions à choix multiple avec radio buttons et options personnalisables
+  - Ajout dynamique d'inputs pour questions et options supplémentaires (inspiré de Google Forms)
+- **Réponse aux sondages** : affichage adaptatif selon le type de question avec persistance automatique des réponses
+- **Filtrage intelligent** : masquage automatique des sondages déjà complétés par l'utilisateur connecté
+- **Protection anti-bruteforce** : système de limitation des tentatives de connexion avec table `login_attempts` dédiée
+- **Protection contre les injections SQL** : utilisation exclusive de requêtes préparées sur tous les endpoints
+- **Interface utilisateur adaptative** : barre de navigation dynamique avec boutons adaptés selon l'état de connexion (Create, Logout, Register, Login)
+- **Navigation fluide** : redirection automatique vers la liste des sondages après soumission de réponses
 
 ## Structure du projet
 
 ### Fichiers HTML (`/html`)
-- `index.html` : Formulaire de login
-- `register.html` : Formulaire d'inscription
-- `home.html` : Liste des sondages disponibles
-- `questions.html` : Affichage des questions et saisie des réponses
-- `create_survey.html` : Création de nouveaux sondages (utilisateurs connectés)
+- `index.html` : Page de connexion avec formulaire de login
+- `register.html` : Page d'inscription pour les nouveaux utilisateurs
+- `home.html` : Page d'accueil affichant la liste des sondages disponibles
+- `questions.html` : Page d'affichage des questions et de saisie des réponses
+- `create_survey.html` : Page de création de nouveaux sondages (réservée aux utilisateurs connectés)
 
 ### Fichiers JavaScript (`/js`)
-- `script.js` : Logique d'authentification et login
-- `register.js` : Logique d'inscription
-- `home.js` : Affichage dynamique des sondages (filtrés selon les réponses)
-- `questions.js` : Affichage adaptatif des questions (textarea / radio) et soumission des réponses
-- `create_survey.js` : Gestion du formulaire de création (inputs dynamiques, types de questions)
+- `script.js` : Gestion de l'authentification et logique de connexion
+- `register.js` : Logique d'inscription des nouveaux utilisateurs
+- `home.js` : Affichage dynamique des sondages avec filtrage selon les réponses déjà soumises
+- `questions.js` : Affichage adaptatif des questions (textarea ou radio buttons) et gestion de la soumission des réponses
+- `create_survey.js` : Gestion du formulaire de création avec inputs dynamiques et sélection des types de questions
 
 ### Endpoints PHP (`/php`)
-- `login_check.php` : Authentification utilisateur avec anti-bruteforce
-- `register.php` : Inscription avec validation et hachage des mots de passe
-- `get_sondage.php` : Récupération de la liste des sondages (filtrés par utilisateur)
-- `get_questions.php` : Récupération des questions avec type et options (si choix multiple)
-- `save_answer.php` : Enregistrement des réponses aux questions
-- `create_survey.php` : Création de sondages avec questions et options (transaction SQL)
+- `login_check.php` : Authentification des utilisateurs avec protection anti-bruteforce
+- `register.php` : Inscription des nouveaux utilisateurs avec validation et hachage sécurisé des mots de passe
+- `get_sondage.php` : Récupération de la liste des sondages disponibles (filtrés selon l'utilisateur connecté)
+- `get_questions.php` : Récupération des questions avec leurs types et options associées (pour les choix multiples)
+- `save_answer.php` : Enregistrement sécurisé des réponses aux questions
+- `create_survey.php` : Création complète de sondages avec questions et options (utilise des transactions SQL)
 
 ### Base de données
-- `sql/gogoleform.sql` : Structure initiale des tables
-- `sql/migration_question_types.sql` : Migration pour ajouter le support des types de questions et options
-  - Ajout colonne `type` dans la table `question`
-  - Création table `question_option` pour les choix multiples
+- `sql/gogoleform.sql` : Structure initiale complète des tables de la base de données
+- `sql/migration_question_types.sql` : Script de migration pour ajouter le support des types de questions et des options
+  - Ajout de la colonne `type` dans la table `question`
+  - Création de la table `question_option` pour gérer les choix multiples
 
-### Autres
-- `style.css` : Styles personnalisés
+### Autres fichiers
+- `style.css` : Feuille de styles CSS personnalisés pour l'interface
 
 ## Démarrage
 
-1. Importez la structure SQL et les données depuis le dossier `/sql` dans MySQL.
-2. Placez le dossier dans `htdocs` de XAMPP.
-3. Lancez Apache et MySQL via XAMPP.
-4. Accédez à [http://localhost/google-form/html/index.html](http://localhost/google-form/html/index.html) dans votre navigateur.
+1. Importez la structure SQL et les données initiales depuis le dossier `/sql` dans votre instance MySQL.
+2. Placez le dossier du projet dans le répertoire `htdocs` de votre installation XAMPP.
+3. Lancez les services Apache et MySQL via le panneau de contrôle XAMPP.
+4. Accédez à l'application via votre navigateur à l'adresse : [http://localhost/google-form/html/index.html](http://localhost/google-form/html/index.html)
 
 ## Librairies utilisées
 
-- [Bootstrap 5](https://getbootstrap.com/)
+- [Bootstrap 5](https://getbootstrap.com/) - Framework CSS pour une interface responsive et moderne
 
 ## Sécurité & bonnes pratiques
 
-- Mots de passe hashés (PHP `password_hash`/`password_verify`)
-- Validation et assainissement des entrées côté serveur
-- Requêtes préparées partout (anti-injection SQL)
-- Limitation brute-force sur le login (table `login_attempts`)
-- Authentification requise pour les actions sensibles
-- Envoi sécurisé de `user_id` en POST (body JSON) au lieu de GET (URL)
-- Vérification de la connexion côté client (clé `user_id` dans le localStorage)
-- Les requêtes fetch JS ne partent que si l'utilisateur est authentifié
-- CORS systématique sur tous les endpoints PHP
-- Transactions SQL pour garantir la cohérence des données (création de sondages)
-- Structure de projet organisée pour une meilleure maintenabilité
+- Mots de passe sécurisés : utilisation des fonctions PHP `password_hash` et `password_verify` pour le hachage
+- Validation rigoureuse et assainissement des entrées utilisateur côté serveur
+- Protection anti-injection SQL : utilisation exclusive de requêtes préparées sur tous les endpoints
+- Système de limitation des tentatives de connexion contre les attaques par force brute (table `login_attempts`)
+- Authentification obligatoire pour toutes les actions sensibles de l'application
+- Transmission sécurisée de `user_id` via POST (body JSON) au lieu de paramètres GET dans l'URL
+- Vérification de l'état de connexion côté client via la clé `user_id` stockée dans le localStorage
+- Contrôle d'authentification : les requêtes fetch JavaScript ne sont exécutées que si l'utilisateur est authentifié
+- Configuration CORS systématique sur l'ensemble des endpoints PHP pour une communication sécurisée
+- Transactions SQL pour garantir l'intégrité et la cohérence des données lors de la création de sondages
+- Architecture organisée et modulaire pour faciliter la maintenance et l'évolution du projet
 
 ## Exemple de connexion
 
-Après inscription, connectez-vous avec vos identifiants créés.
+Après avoir créé votre compte via le formulaire d'inscription, connectez-vous à l'application en utilisant les identifiants que vous avez définis.
 
 ## TODO & améliorations possibles
 
-Voir le fichier `todo.txt` pour les axes d'amélioration sécurité, validation, UX, etc.
+Consultez le fichier `todo.txt` pour découvrir les axes d'amélioration envisagés concernant la sécurité, la validation, l'expérience utilisateur et les fonctionnalités à venir.
