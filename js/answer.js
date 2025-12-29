@@ -202,7 +202,11 @@ function createPieChart(canvasId, answers) {
     const answerCounts = {};
     answers.forEach(answer => {
         const text = answer.answer_text || 'Sans réponse';
-        answerCounts[text] = (answerCounts[text] || 0) + 1;
+        // Séparer les réponses multiples (séparées par des virgules)
+        const options = text.split(',').map(opt => opt.trim());
+        options.forEach(option => {
+            answerCounts[option] = (answerCounts[option] || 0) + 1;
+        });
     });
     
     // Préparer les données pour le graphique
@@ -286,7 +290,8 @@ function downloadCSV() {
     }
     
     const formTitle = document.getElementById('answerTitle').textContent.replace('Réponses - ', '');
-    let csv = `Sondage: ${formTitle}\n\n`;
+    // Ajouter le BOM UTF-8 au début du CSV pour une meilleure compatibilité
+    let csv = '\uFEFF' + `Sondage: ${formTitle}\n\n`;
     
     window.allQuestionsData.forEach((question, qIndex) => {
         csv += `Question ${qIndex + 1}: ${question.question_text}\n`;

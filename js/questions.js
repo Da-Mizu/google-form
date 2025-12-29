@@ -43,25 +43,25 @@ if (formId) {
                         
                         // Selon le type de question, créer le bon input
                         if (q.type === 'multiple' && q.options && q.options.length > 0) {
-                            // Choix multiple : radio buttons
+                            // Choix multiple : checkboxes (plusieurs réponses possibles)
                             q.options.forEach((option, index) => {
                                 const optionDiv = document.createElement('div');
                                 optionDiv.className = 'form-check';
                                 
-                                const radio = document.createElement('input');
-                                radio.type = 'radio';
-                                radio.className = 'form-check-input';
-                                radio.name = `answer_${q.id}`;
-                                radio.value = option;
-                                radio.id = `answer_${q.id}_${index}`;
-                                radio.setAttribute('data-question-id', q.id);
+                                const checkbox = document.createElement('input');
+                                checkbox.type = 'checkbox';
+                                checkbox.className = 'form-check-input';
+                                checkbox.name = `answer_${q.id}`;
+                                checkbox.value = option;
+                                checkbox.id = `answer_${q.id}_${index}`;
+                                checkbox.setAttribute('data-question-id', q.id);
                                 
                                 const label = document.createElement('label');
                                 label.className = 'form-check-label';
                                 label.htmlFor = `answer_${q.id}_${index}`;
                                 label.textContent = option;
                                 
-                                optionDiv.appendChild(radio);
+                                optionDiv.appendChild(checkbox);
                                 optionDiv.appendChild(label);
                                 li.appendChild(optionDiv);
                             });
@@ -89,9 +89,9 @@ if (formId) {
         document.getElementById('answerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Récupérer toutes les réponses (textareas et radio buttons)
+            // Récupérer toutes les réponses (textareas et checkboxes)
             const textareas = document.querySelectorAll('#questionList textarea[data-question-id]');
-            const radioGroups = document.querySelectorAll('#questionList input[type="radio"][data-question-id]');
+            const checkboxGroups = document.querySelectorAll('#questionList input[type="checkbox"][data-question-id]');
             
             let hasError = false;
             const processedQuestions = new Set();
@@ -117,30 +117,32 @@ if (formId) {
                 }
             }
             
-            // Traiter les radio buttons (choix multiple)
-            const radioQuestions = {};
-            radioGroups.forEach(radio => {
-                const questionId = radio.getAttribute('data-question-id');
-                if (!radioQuestions[questionId]) {
-                    radioQuestions[questionId] = [];
+            // Traiter les checkboxes (choix multiple - plusieurs réponses possibles)
+            const checkboxQuestions = {};
+            checkboxGroups.forEach(checkbox => {
+                const questionId = checkbox.getAttribute('data-question-id');
+                if (!checkboxQuestions[questionId]) {
+                    checkboxQuestions[questionId] = [];
                 }
-                radioQuestions[questionId].push(radio);
+                checkboxQuestions[questionId].push(checkbox);
             });
             
-            for (const questionId in radioQuestions) {
+            for (const questionId in checkboxQuestions) {
                 if (processedQuestions.has(questionId)) continue;
                 
-                const radios = radioQuestions[questionId];
-                const selected = radios.find(r => r.checked);
+                const checkboxes = checkboxQuestions[questionId];
+                const selectedValues = checkboxes.filter(cb => cb.checked).map(cb => cb.value);
                 
-                if (selected) {
+                if (selectedValues.length > 0) {
+                    // Combiner toutes les réponses sélectionnées avec un séparateur
+                    const combinedAnswer = selectedValues.join(', ');
                     try {
                         const response = await fetch('http://localhost/google-form/php/save_answer.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ question_id: questionId, answer_text: selected.value, user_id: userId })
+                            body: JSON.stringify({ question_id: questionId, answer_text: combinedAnswer, user_id: userId })
                         });
-                        console.log('Envoi de la réponse pour la question ID :', questionId, 'Réponse :', selected.value, 'User ID :', userId);
+                        console.log('Envoi de la réponse pour la question ID :', questionId, 'Réponse :', combinedAnswer, 'User ID :', userId);
                         const result = await response.json();
                         if (!result.success) hasError = true;
                     } catch {
