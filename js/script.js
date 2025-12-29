@@ -3,7 +3,6 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     const message = document.getElementById('loginMessage');
-    console.log('Tentative de connexion pour l\'utilisateur :', username + ' avec le mot de passe :', password);
     message.textContent = '';
     try {
         const response = await fetch('http://localhost/google-form/php/login_check.php', {
