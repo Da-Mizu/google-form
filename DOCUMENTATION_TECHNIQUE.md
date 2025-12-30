@@ -786,7 +786,7 @@ if (!isset($_POST['user_id']) || empty($_POST['user_id'])) {
     exit;
 }
 
-// Vérifier la propriété
+// Vérifier la propriété du sondage
 $stmt = $pdo->prepare("SELECT user_id FROM form WHERE id = ?");
 $stmt->execute([$form_id]);
 $form = $stmt->fetch();
@@ -866,9 +866,6 @@ cd google-form
 ```
 
 2. **Importer la base de données**
-```bash
-mysql -u root -p < sql/google-form.sql
-```
 
 3. **Configurer la connexion MySQL**
 Modifier les fichiers PHP (`php/*.php`) si nécessaire :
@@ -882,8 +879,6 @@ $password = '';
 4. **Démarrer le serveur**
 ```bash
 # Avec XAMPP : démarrer Apache et MySQL
-# Ou avec PHP built-in server :
-php -S localhost:8000
 ```
 
 5. **Accéder à l'application**
@@ -891,38 +886,6 @@ php -S localhost:8000
 http://localhost/google-form/html/index.html
 ```
 
-### Configuration de production
-
-1. **Variables d'environnement**
-Créer un fichier `config.php` :
-```php
-<?php
-define('DB_HOST', getenv('DB_HOST'));
-define('DB_NAME', getenv('DB_NAME'));
-define('DB_USER', getenv('DB_USER'));
-define('DB_PASS', getenv('DB_PASS'));
-```
-
-2. **Désactiver les erreurs PHP**
-```php
-ini_set('display_errors', 0);
-error_reporting(0);
-```
-
-3. **HTTPS**
-Forcer HTTPS dans `.htaccess` :
-```apache
-RewriteEngine On
-RewriteCond %{HTTPS} off
-RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-```
-
-4. **Sécurité des headers**
-```php
-header('X-Frame-Options: DENY');
-header('X-Content-Type-Options: nosniff');
-header('X-XSS-Protection: 1; mode=block');
-```
 
 ---
 
@@ -973,7 +936,7 @@ header('X-XSS-Protection: 1; mode=block');
 │ Client   │      │ questions.js │      │ PHP      │      │ MySQL    │
 └──────────┘      └──────────────┘      └──────────┘      └──────────┘
      │                    │                    │                 │
-     │ 1. GET /questions.html?form_id=5       │                 │
+     │ 1. GET /questions.html?form_id=5        │                 │
      │───────────────────>│                    │                 │
      │                    │                    │                 │
      │                    │ 2. Fetch questions │                 │
@@ -1085,61 +1048,6 @@ if (question.type === 'nouveau_type') {
 
 ---
 
-### Ajouter un endpoint API
-
-1. **Créer le fichier PHP**
-```php
-<?php
-// php/nouvelle_api.php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-
-// Connexion DB
-$host = '127.0.0.1';
-$db = 'google-form';
-$user = 'root';
-$pass = '';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-    // Logique métier
-    $data = json_decode(file_get_contents('php://input'), true);
-    
-    // Validation
-    if (!isset($data['param'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Paramètre manquant']);
-        exit;
-    }
-    
-    // Traitement
-    $stmt = $pdo->prepare("SELECT * FROM table WHERE field = ?");
-    $stmt->execute([$data['param']]);
-    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo json_encode(['success' => true, 'data' => $result]);
-    
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Erreur serveur']);
-}
-?>
-```
-
-2. **Appeler depuis JavaScript**
-```javascript
-const response = await fetch('http://localhost/google-form/php/nouvelle_api.php', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ param: 'valeur' })
-});
-const result = await response.json();
-```
-
----
-
 ### Tests
 
 #### Tests manuels
@@ -1173,34 +1081,9 @@ Email: test@example.com
 
 ---
 
-### Debugging
-
-#### Activer les logs PHP
-```php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-```
-
-#### Console JavaScript
-```javascript
-console.log('Question ID:', questionId);
-console.log('Answer:', answer);
-```
-
-#### Inspecter les requêtes réseau
-- Ouvrir DevTools (F12)
-- Onglet Network
-- Vérifier les requêtes fetch
-- Examiner les réponses JSON
-
----
 
 ## Maintenance
 
-### Sauvegarde de la base de données
-```bash
-mysqldump -u root -p google-form > backup_$(date +%Y%m%d).sql
-```
 
 ### Nettoyage des tentatives de connexion
 ```sql
@@ -1234,30 +1117,13 @@ ORDER BY nb_participants DESC;
 - Pas de limite sur le nombre de questions par sondage
 - Pas de pagination pour les longues listes de réponses
 - Pas de système de notification
-- Pas de validation approfondie côté serveur
 
 ### Améliorations possibles
-1. **Système de rôles** : Admin, Créateur, Répondant
-2. **Questions conditionnelles** : Afficher Q2 seulement si réponse Q1 = "Oui"
-3. **Templates de sondages** : Modèles prédéfinis
-4. **Analytics avancés** : Tableau de bord avec statistiques
-5. **API RESTful** : Restructuration complète en REST
-6. **Websockets** : Résultats en temps réel
-7. **Import/Export** : Importer des questions depuis Excel
-8. **Thèmes personnalisables** : Dark mode, couleurs
-9. **Multi-langue** : i18n
-10. **Mobile app** : Application React Native
+1. **Questions conditionnelles** : Afficher Q2 seulement si réponse Q1 = "Oui"
+2. **Templates de sondages** : Modèles prédéfinis
+3. **Analytics avancés** : Tableau de bord avec statistiques
+4. **Import/Export** : Importer des questions depuis Excel
+5. **Thèmes personnalisables** : Dark mode, couleurs
 
 ---
 
-## Contacts & Support
-
-- **Repository GitHub** : [lien vers le repo]
-- **Documentation** : Ce fichier
-- **Issues** : Ouvrir une issue sur GitHub
-
----
-
-**Version** : 1.0.0  
-**Dernière mise à jour** : 29 décembre 2025  
-**Auteur** : [Votre nom]
