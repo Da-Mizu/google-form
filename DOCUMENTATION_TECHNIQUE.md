@@ -361,7 +361,7 @@ Liste des sondages disponibles pour l'utilisateur.
     "id": 5,
     "title": "Sondage satisfaction",
     "description": "...",
-    "user_id": 2
+    "user_id": 1
   }
 ]
 ```
