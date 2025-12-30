@@ -1,32 +1,7 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+require_once 'config.php';
 
-$host = 'localhost';
-$db = 'google-form';
-$user = 'root';
-$pass = '';
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Erreur de connexion à la base']);
-    exit;
-}
+$pdo = getPDOConnection();
 
 $input = json_decode(file_get_contents('php://input'), true);
 $form_id = isset($input['form_id']) ? intval($input['form_id']) : null;
@@ -71,10 +46,20 @@ try {
         exit;
     }
 
-    // Récupérer l'utilisateur cible
-    $stmtUser = $pdo->prepare('SELECT id, username, email FROM user WHERE username = ?');
-    $stmtUser->execute([$target_username]);
-    $targetUser = $stmtUser->fetch();
+    // Récupérer l'utilisateur cible (lookup via username_hash)
+    $targetUser = null;
+    $targetUsernameHash = lookupHash($target_username);
+
+    try {
+        $stmtUser = $pdo->prepare('SELECT id FROM user WHERE username_hash = ? LIMIT 1');
+        $stmtUser->execute([$targetUsernameHash]);
+        $targetUser = $stmtUser->fetch();
+    } catch (PDOException $e) {
+        // Fallback si la colonne n'existe pas encore
+        $stmtUser = $pdo->prepare('SELECT id FROM user WHERE username = ? LIMIT 1');
+        $stmtUser->execute([$target_username]);
+        $targetUser = $stmtUser->fetch();
+    }
     if (!$targetUser) {
         http_response_code(404);
         echo json_encode(['error' => 'Utilisateur cible introuvable']);
@@ -85,7 +70,6 @@ try {
     $stmtAccess = $pdo->prepare('INSERT INTO survey_access (form_id, user_id, access_type) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE access_type = VALUES(access_type)');
     $stmtAccess->execute([$form_id, $targetUser['id'], $access_type]);
 
-    header('Content-Type: application/json');
     echo json_encode(['success' => true]);
 } catch (PDOException $e) {
     http_response_code(500);

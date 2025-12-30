@@ -1,32 +1,7 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: GET, OPTIONS");
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+require_once 'config.php';
 
-$host = 'localhost';
-$db = 'google-form';
-$user = 'root';
-$pass = '';
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Erreur de connexion à la base']);
-    exit;
-}
+$pdo = getPDOConnection();
 
 
 
@@ -45,12 +20,13 @@ $questions = $stmt->fetchAll();
 // Pour chaque question à choix multiple, récupérer les options
 $stmtOptions = $pdo->prepare('SELECT option_text FROM question_option WHERE question_id = ?');
 foreach ($questions as &$question) {
+    $question['question_text'] = decryptData($question['question_text']);
     if ($question['type'] === 'multiple') {
         $stmtOptions->execute([$question['id']]);
-        $question['options'] = $stmtOptions->fetchAll(PDO::FETCH_COLUMN);
+        $options = $stmtOptions->fetchAll(PDO::FETCH_COLUMN);
+        $question['options'] = array_map('decryptData', $options);
     }
 }
 
-header('Content-Type: application/json');
 // Authentification déléguée au client (localStorage)
 echo json_encode($questions);

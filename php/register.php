@@ -1,32 +1,7 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+require_once 'config.php';
 
-$host = 'localhost';
-$db = 'google-form';
-$user = 'root';
-$pass = '';
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Erreur de connexion à la base']);
-    exit;
-}
+$pdo = getPDOConnection();
 
 $data = json_decode(file_get_contents('php://input'), true);
 
@@ -54,9 +29,15 @@ if (!is_string($password) || strlen($password) < 6) {
     exit;
 }
 
+// Chiffrement + hash de recherche (nécessite les colonnes username_hash / email_hash)
+$encryptedUsername = encryptData($username);
+$encryptedEmail = encryptData($email);
+$usernameHash = lookupHash($username);
+$emailHash = lookupHash($email);
+
 // Vérifier si l'utilisateur existe déjà
-$stmt = $pdo->prepare('SELECT id FROM user WHERE username = ? OR email = ?');
-$stmt->execute([$username, $email]);
+$stmt = $pdo->prepare('SELECT id FROM user WHERE username_hash = ? OR email_hash = ?');
+$stmt->execute([$usernameHash, $emailHash]);
 if ($stmt->fetch()) {
     http_response_code(409);
     echo json_encode(['error' => 'Nom d\'utilisateur ou email déjà utilisé']);
@@ -66,8 +47,7 @@ if ($stmt->fetch()) {
 // Hacher le mot de passe
 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-$stmt = $pdo->prepare('INSERT INTO user (username, password, email) VALUES (?, ?, ?)');
-$stmt->execute([$username, $hashedPassword, $email]);
+$stmt = $pdo->prepare('INSERT INTO user (username, username_hash, password, email, email_hash) VALUES (?, ?, ?, ?, ?)');
+$stmt->execute([$encryptedUsername, $usernameHash, $hashedPassword, $encryptedEmail, $emailHash]);
 
-header('Content-Type: application/json');
 echo json_encode(['success' => true]);

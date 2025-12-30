@@ -1,32 +1,7 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+require_once 'config.php';
 
-$host = 'localhost';
-$db = 'google-form';
-$user = 'root';
-$pass = '';
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Erreur de connexion à la base']);
-    exit;
-}
+$pdo = getPDOConnection();
 
 $input = json_decode(file_get_contents('php://input'), true);
 $form_id = isset($input['form_id']) ? intval($input['form_id']) : null;
@@ -59,11 +34,19 @@ try {
         exit;
     }
 
-    $stmt = $pdo->prepare('SELECT sa.user_id, sa.access_type, u.username, u.email FROM survey_access sa JOIN user u ON sa.user_id = u.id WHERE sa.form_id = ? ORDER BY u.username');
+    $stmt = $pdo->prepare('SELECT sa.user_id, sa.access_type, u.username, u.email FROM survey_access sa JOIN user u ON sa.user_id = u.id WHERE sa.form_id = ?');
     $stmt->execute([$form_id]);
     $accesses = $stmt->fetchAll();
 
-    header('Content-Type: application/json');
+    foreach ($accesses as &$access) {
+        $access['username'] = decryptData($access['username']);
+        $access['email'] = decryptData($access['email']);
+    }
+
+    usort($accesses, function ($a, $b) {
+        return strcmp((string)$a['username'], (string)$b['username']);
+    });
+
     echo json_encode($accesses);
 } catch (PDOException $e) {
     http_response_code(500);

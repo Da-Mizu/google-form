@@ -1,32 +1,7 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+require_once 'config.php';
 
-$host = 'localhost';
-$db = 'google-form';
-$user = 'root';
-$pass = '';
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Erreur de connexion à la base']);
-    exit;
-}
+$pdo = getPDOConnection();
 
 
 // Récupérer l'ID utilisateur depuis le body de la requête POST
@@ -63,5 +38,13 @@ if ($user_id) {
 }
 $sondages = $stmt->fetchAll();
 
-header('Content-Type: application/json');
+foreach ($sondages as &$sondage) {
+    if (isset($sondage['title'])) {
+        $sondage['title'] = decryptData($sondage['title']);
+    }
+    if (isset($sondage['description'])) {
+        $sondage['description'] = decryptData($sondage['description']);
+    }
+}
+
 echo json_encode($sondages);

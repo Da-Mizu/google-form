@@ -96,17 +96,21 @@ Stocke les utilisateurs de l'application.
 ```sql
 CREATE TABLE `user` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
-  `username` VARCHAR(50) UNIQUE NOT NULL,
-  `password` VARCHAR(255) NOT NULL,  -- Hash bcrypt
-  `email` VARCHAR(100)
+  `username` TEXT NOT NULL,          -- Chiffré (enc:v1:...)
+  `username_hash` CHAR(64) UNIQUE,   -- HMAC-SHA256 pour recherche
+  `password` VARCHAR(255) NOT NULL,  -- Hash bcrypt (password_hash)
+  `email` TEXT,                      -- Chiffré (enc:v1:...)
+  `email_hash` CHAR(64) UNIQUE       -- HMAC-SHA256 pour recherche
 );
 ```
 
 **Champs :**
 - `id` : Identifiant unique
-- `username` : Nom d'utilisateur unique
+- `username` : Nom d'utilisateur (stocké chiffré en base)
+- `username_hash` : Hash déterministe (permet `SELECT ... WHERE username_hash = ?`)
 - `password` : Mot de passe haché avec `password_hash()`
-- `email` : Adresse email
+- `email` : Adresse email (stockée chiffrée en base)
+- `email_hash` : Hash déterministe (permet `SELECT ... WHERE email_hash = ?`)
 
 ---
 
@@ -116,7 +120,7 @@ Représente les sondages/formulaires créés.
 ```sql
 CREATE TABLE `form` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
-  `title` VARCHAR(255) NOT NULL,
+  `title` TEXT NOT NULL,            -- Chiffré (enc:v1:...)
   `description` TEXT,
   `user_id` INT,
   FOREIGN KEY (`user_id`) REFERENCES `user`(`id`)
@@ -125,8 +129,8 @@ CREATE TABLE `form` (
 
 **Champs :**
 - `id` : Identifiant unique du formulaire
-- `title` : Titre du sondage
-- `description` : Description optionnelle
+- `title` : Titre du sondage (stocké chiffré en base)
+- `description` : Description optionnelle (stockée chiffrée en base)
 - `user_id` : Propriétaire du formulaire
 
 ---
@@ -162,7 +166,7 @@ Options pour les questions à choix multiples.
 CREATE TABLE `question_option` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
   `question_id` INT NOT NULL,
-  `option_text` VARCHAR(255) NOT NULL,
+  `option_text` TEXT NOT NULL,      -- Chiffré (enc:v1:...)
   FOREIGN KEY (`question_id`) REFERENCES `question`(`id`) ON DELETE CASCADE
 );
 ```
@@ -189,6 +193,8 @@ CREATE TABLE `answer` (
   - Texte libre pour type `text`
   - Valeur(s) séparées par virgule pour `multiple` (ex: "Option 1, Option 3")
   - Nombre de 0 à 10 pour type `scale`
+
+**Note chiffrement :** `answer_text` est stocké chiffré en base (format `enc:v1:...`) et déchiffré côté API avant d'être renvoyé au frontend.
 
 ---
 
@@ -769,8 +775,8 @@ if ($attempt && $attempt['attempts'] >= 5) {
 $query = "SELECT * FROM user WHERE username = '$username'";
 
 // ✅ Sécurisé
-$stmt = $pdo->prepare("SELECT * FROM user WHERE username = ?");
-$stmt->execute([$username]);
+$stmt = $pdo->prepare("SELECT * FROM user WHERE username_hash = ?");
+$stmt->execute([lookupHash($username)]);
 ```
 
 ---
@@ -822,6 +828,28 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 ---
 
+### 5. Chiffrement des données (au repos)
+
+Le projet chiffre les champs sensibles **avant l'écriture en base** (AES-256-CBC) et les déchiffre côté API à la lecture.
+
+- Format de stockage : `enc:v1:<base64(iv|ciphertext)>`
+- Fonctions : `encryptData()`, `decryptData()`, `lookupHash()` dans `php/config.php`
+- Les colonnes texte doivent être en `TEXT` (le base64 est plus long qu'une valeur en clair)
+
+**Important :** comme le chiffrement utilise un IV aléatoire, on ne peut pas faire `WHERE username = ?` sur le texte chiffré.
+Pour ça, on utilise des colonnes de recherche déterministes : `username_hash` / `email_hash`.
+
+---
+
+### 6. Chiffrement en transit (MITM) : HTTPS/TLS
+
+Le chiffrement en base **ne protège pas** contre une interception réseau entre le navigateur et le serveur.
+Pour empêcher un attaquant « au milieu » (MITM) de lire/modifier les requêtes, il faut servir l'application via **HTTPS (TLS)**.
+
+Sans HTTPS (HTTP simple), les requêtes et réponses peuvent être lues en clair sur le réseau.
+
+---
+
 ### 5. Transactions SQL
 
 **Pour garantir la cohérence des données :**
@@ -868,20 +896,22 @@ cd google-form
 2. **Importer la base de données**
 
 3. **Configurer la connexion MySQL**
-Modifier les fichiers PHP (`php/*.php`) si nécessaire :
-```php
-$host = '127.0.0.1';
-$db = 'google-form';
-$user = 'root';
-$password = '';
-```
+La configuration est centralisée dans `php/config.php`.
 
-4. **Démarrer le serveur**
+4. **Configurer la clé de chiffrement (recommandé)**
+- Variable d'environnement Windows (PowerShell) :
+  - `setx GOOGLEFORM_ENCRYPTION_KEY "une-cle-longue-et-secrete"`
+
+5. **Appliquer les migrations DB (si base déjà existante)**
+- Ajouter les colonnes `username_hash` / `email_hash` et élargir les colonnes texte (voir `sql/google-form.sql`)
+- Puis migrer les données existantes : `php php/migrate_encrypt.php`
+
+6. **Démarrer le serveur**
 ```bash
 # Avec XAMPP : démarrer Apache et MySQL
 ```
 
-5. **Accéder à l'application**
+7. **Accéder à l'application**
 ```
 http://localhost/google-form/html/index.html
 ```

@@ -1,32 +1,7 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+require_once 'config.php';
 
-$host = 'localhost';
-$db = 'google-form';
-$user = 'root';
-$pass = '';
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Erreur de connexion à la base de données']);
-    exit;
-}
+$pdo = getPDOConnection();
 
 // Récupérer les paramètres
 $form_id = isset($_GET['form_id']) ? intval($_GET['form_id']) : null;
@@ -81,8 +56,16 @@ try {
     $stmtAnswers = $pdo->prepare('SELECT a.id, a.user_id, u.username, a.answer_text, a.answered_at FROM answer a LEFT JOIN user u ON a.user_id = u.id WHERE a.question_id = ? ORDER BY a.answered_at DESC');
     
     foreach ($questions as &$question) {
+        $question['question_text'] = decryptData($question['question_text']);
         $stmtAnswers->execute([$question['id']]);
         $answers = $stmtAnswers->fetchAll();
+
+        foreach ($answers as &$answer) {
+            $answer['answer_text'] = decryptData($answer['answer_text']);
+            if (isset($answer['username']) && $answer['username'] !== null) {
+                $answer['username'] = decryptData($answer['username']);
+            }
+        }
         
         // Si la question est anonyme, masquer uniquement l'identité de l'utilisateur
         if (isset($question['anonymus']) && intval($question['anonymus']) === 1) {
@@ -102,11 +85,10 @@ try {
     
     $response = [
         'success' => true,
-        'form_title' => $form['title'],
+        'form_title' => decryptData($form['title']),
         'questions' => $questions
     ];
     
-    header('Content-Type: application/json');
     echo json_encode($response);
     
 } catch (PDOException $e) {

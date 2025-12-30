@@ -1,36 +1,9 @@
 <?php
-// Autoriser CORS pour le développement local (toutes origines)
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+require_once 'config.php';
 // login_check.php
 // Vérifie si l'utilisateur existe dans la base MySQL
 
-// Paramètres de connexion à la base (à renseigner manuellement)
-$host = 'localhost';
-$db = 'google-form';
-$user = 'root';
-$pass = '';
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Erreur de connexion à la base']);
-    exit;
-}
+$pdo = getPDOConnection();
 
 // Récupère les données du formulaire (JSON)
 $ip = $_SERVER['REMOTE_ADDR'];
@@ -60,13 +33,49 @@ if (!$username || !$password) {
     exit;
 }
 
-// Vérifie si l'utilisateur existe
+// Vérifie si l'utilisateur existe (lookup via username_hash)
+$user = null;
+$usernameHash = lookupHash($username);
 
-$stmt = $pdo->prepare('SELECT * FROM user WHERE username = ?');
-$stmt->execute([$username]);
-$user = $stmt->fetch();
+try {
+    $stmt = $pdo->prepare('SELECT * FROM user WHERE username_hash = ? LIMIT 1');
+    $stmt->execute([$usernameHash]);
+    $user = $stmt->fetch();
+} catch (PDOException $e) {
+    // Fallback si la colonne n'existe pas encore
+    $stmt = $pdo->prepare('SELECT * FROM user WHERE username = ? LIMIT 1');
+    $stmt->execute([$username]);
+    $user = $stmt->fetch();
+}
 
 if ($user && password_verify($password, $user['password'])) {
+    // Déchiffrer les champs sensibles (rétro-compatible si encore en clair)
+    if (isset($user['username'])) {
+        $user['username'] = decryptData($user['username']);
+    }
+    if (isset($user['email'])) {
+        $user['email'] = decryptData($user['email']);
+    }
+
+    // Migration progressive: si l'utilisateur est encore en clair, chiffrer + ajouter hashes
+    try {
+        $needsMigration = isset($user['username']) && strpos((string)$user['username'], ENCRYPTION_PREFIX_V1) !== 0;
+        if ($needsMigration) {
+            $newEncUsername = encryptData($user['username']);
+            $newEncEmail = isset($user['email']) ? encryptData($user['email']) : null;
+            $newUsernameHash = lookupHash($user['username']);
+            $newEmailHash = isset($user['email']) && $user['email'] !== '' ? lookupHash($user['email']) : null;
+
+            $upd = $pdo->prepare('UPDATE user SET username = ?, username_hash = ?, email = ?, email_hash = ? WHERE id = ?');
+            $upd->execute([$newEncUsername, $newUsernameHash, $newEncEmail, $newEmailHash, $user['id']]);
+        }
+    } catch (PDOException $e) {
+        // Ignore migration errors
+    }
+
+    // Ne jamais renvoyer le hash du mot de passe au client
+    unset($user['password']);
+
     // Réinitialiser les tentatives en cas de succès
     $resetStmt = $pdo->prepare('DELETE FROM login_attempts WHERE ip = ?');
     $resetStmt->execute([$ip]);
