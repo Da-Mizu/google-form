@@ -84,11 +84,6 @@ google-form/
 └── README.md           # Documentation utilisateur
 ```
 
-### Architecture MVC implicite
-- **Modèle** : Scripts PHP + Base de données MySQL
-- **Vue** : Fichiers HTML + CSS
-- **Contrôleur** : JavaScript (logique côté client) + PHP (API)
-
 ---
 
 ## Base de données
@@ -185,7 +180,6 @@ CREATE TABLE `question_option` (
 **Usage :**
 - Utilisé uniquement pour les questions de type `multiple`
 - Chaque option représente un choix possible
-- Suppression en cascade lors de la suppression de la question
 
 ---
 
@@ -254,13 +248,10 @@ CREATE TABLE `login_attempts` (
 **Logique :**
 - Après 5 tentatives échouées, blocage de 15 minutes
 - Réinitialisation après connexion réussie
-- Support IPv4 et IPv6
 
 ---
 
 ## API Backend (PHP)
-
-Tous les endpoints renvoient du JSON et incluent des headers CORS pour le développement. 
 
 ### Configuration centrale (`php/config.php`)
 
@@ -289,8 +280,6 @@ $options = [
 ```php
 define('ENCRYPTION_KEY', getenv('GOOGLEFORM_ENCRYPTION_KEY') ?: 'gogleform_secret_key_2025_encryption_aes256_secure_production');
 ```
-
-> **Recommandation** : Définir la variable d'environnement `GOOGLEFORM_ENCRYPTION_KEY` en production.
 
 ---
 
@@ -330,8 +319,6 @@ Authentifie un utilisateur avec protection anti-bruteforce.
 - Vérification anti-bruteforce (table `login_attempts`)
 - Mot de passe vérifié avec `password_verify()`
 - Blocage IP après 5 tentatives échouées (15 minutes)
-- Lookup via `username_hash` pour performance
-- Migration progressive des données en clair vers format chiffré
 
 ---
 
@@ -360,7 +347,7 @@ Crée un nouveau compte utilisateur.
 - Email : format valide
 - Mot de passe : minimum 6 caractères
 - Vérification unicité via `username_hash` et `email_hash`
-- Chiffrement automatique des données sensibles
+- Chiffrement automatique des données
 
 ---
 
@@ -409,7 +396,6 @@ Crée un nouveau sondage avec ses questions (transaction SQL).
 - Insertion du formulaire (chiffrement du titre/description)
 - Insertion des questions (chiffrement du texte)
 - Insertion des options pour type `multiple` (chiffrement)
-- Rollback automatique en cas d'erreur
 
 ---
 
@@ -516,7 +502,6 @@ Enregistre une réponse à une question.
 
 **Traitement :**
 - Chiffrement automatique de `answer_text`
-- Validation :  1-1000 caractères
 - Authentification obligatoire
 
 ---
@@ -575,7 +560,6 @@ Partage un sondage avec un utilisateur.
 - Seul le propriétaire peut partager
 - Types d'accès valides : "view", "answer", "admin"
 - Vérification existence de l'utilisateur cible
-- Upsert (INSERT ...  ON DUPLICATE KEY UPDATE)
 
 ---
 
@@ -1182,8 +1166,6 @@ if (password_verify($password, $hashedPasswordFromDB)) {
 ```
 
 **Algorithme :** bcrypt (via `PASSWORD_DEFAULT`)
-- Coût automatiquement ajusté selon les capacités du serveur
-- Résistant aux attaques par tables arc-en-ciel et force brute
 
 ---
 
@@ -1228,17 +1210,11 @@ if ($loginSuccess) {
 
 **Toujours utiliser des requêtes préparées :**
 ```php
-// ❌ Vulnérable
-$query = "SELECT * FROM user WHERE username = '$username'";
-$result = $pdo->query($query);
-
 // ✅ Sécurisé
 $stmt = $pdo->prepare('SELECT * FROM user WHERE username_hash = ?');
 $stmt->execute([lookupHash($username)]);
 $result = $stmt->fetch();
 ```
-
-**Tous les endpoints utilisent PDO avec requêtes préparées.**
 
 ---
 
@@ -1320,7 +1296,7 @@ if (validQuestions.length === 0) {
 
 ### 4. Headers CORS
 
-**Tous les endpoints PHP incluent :**
+**Tous les fichiers PHP incluent :**
 ```php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *'); // À restreindre en production
@@ -1372,7 +1348,6 @@ $stmt->execute([$usernameHash]);
 
 **Migration progressive :**
 - Script `php/migrate_encrypt.php` pour chiffrer les données existantes
-- Rétro-compatibilité :  déchiffrement sûr des données déjà en clair
 
 **Algorithme :**
 - **Chiffrement** : AES-256-CBC avec IV aléatoire (16 octets)
@@ -1415,37 +1390,7 @@ function lookupHash(string $value): string {
 
 ---
 
-### 6. Chiffrement en transit (MITM) :  HTTPS/TLS
-
-Le chiffrement en base **ne protège pas** contre une interception réseau entre le navigateur et le serveur.
-
-Pour empêcher un attaquant « au milieu » (MITM) de lire/modifier les requêtes, il faut servir l'application via **HTTPS (TLS)**. 
-
-**Sans HTTPS (HTTP simple) :**
-- Les requêtes et réponses peuvent être lues en clair sur le réseau
-- Passwords, tokens, données sensibles exposées
-- Attaques de type session hijacking possibles
-
-**Recommandations production :**
-- Certificat SSL/TLS (Let's Encrypt gratuit)
-- Redirection automatique HTTP → HTTPS
-- Headers HSTS (HTTP Strict Transport Security)
-
-```php
-// Forcer HTTPS en production
-if (! isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] !== 'on') {
-    $redirect = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-    header('Location: ' . $redirect, true, 301);
-    exit;
-}
-
-// Header HSTS
-header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
-```
-
----
-
-### 7. Transactions SQL
+### 6. Transactions SQL
 
 **Pour garantir la cohérence des données :**
 ```php
@@ -1485,11 +1430,10 @@ try {
 **Avantages :**
 - Atomicité :  tout ou rien
 - Évite les états incohérents (formulaire sans questions, questions sans options)
-- Rollback automatique en cas d'erreur
 
 ---
 
-### 8. Protection XSS (Cross-Site Scripting)
+### 7. Protection XSS (Cross-Site Scripting)
 
 **Côté frontend :**
 ```javascript
@@ -1561,81 +1505,14 @@ $pass = '';
 $charset = 'utf8mb4';
 ```
 
-#### 4. Configurer la clé de chiffrement (IMPORTANT)
-**Option A :  Variable d'environnement (recommandé)**
-
-Windows (PowerShell admin) :
-```powershell
-setx GOOGLEFORM_ENCRYPTION_KEY "une-cle-longue-et-secrete-minimum-32-caracteres" /M
-```
-
-Linux/Mac :
-```bash
-export GOOGLEFORM_ENCRYPTION_KEY="une-cle-longue-et-secrete-minimum-32-caracteres"
-# Ajouter à ~/. bashrc ou ~/.zshrc pour persistance
-```
-
-**Option B :  Modifier directement config.php (déconseillé en production)**
-```php
-define('ENCRYPTION_KEY', 'votre-cle-secrete-unique');
-```
-
-**Générer une clé sécurisée :**
-```php
-// Script PHP pour générer une clé
-echo bin2hex(random_bytes(32));
-// Ou en ligne de commande
-php -r "echo bin2hex(random_bytes(32));"
-```
-
-#### 5. Migrer les données existantes (si base déjà utilisée)
-```bash
-# Ajouter les colonnes de hash si manquantes
-mysql -u root -p google-form << EOF
-ALTER TABLE user ADD COLUMN username_hash CHAR(64) UNIQUE AFTER username;
-ALTER TABLE user ADD COLUMN email_hash CHAR(64) UNIQUE AFTER email;
-ALTER TABLE user MODIFY username TEXT;
-ALTER TABLE user MODIFY email TEXT;
-EOF
-
-# Exécuter le script de migration
-php php/migrate_encrypt.php
-```
-
-#### 6. Démarrer le serveur
+#### 4. Démarrer le serveur
 
 **Avec XAMPP :**
 1. Placer le projet dans `C:\xampp\htdocs\google-form`
 2. Démarrer Apache et MySQL depuis XAMPP Control Panel
 3. Accéder à `http://localhost/google-form/html/index.html`
 
-**Avec serveur PHP intégré :**
-```bash
-cd google-form
-php -S localhost: 8000
-# Accéder à http://localhost:8000/html/index.html
-```
-
-**Avec Apache (configuration vhost) :**
-```apache
-<VirtualHost *:80>
-    ServerName googleform.local
-    DocumentRoot "/path/to/google-form"
-    
-    <Directory "/path/to/google-form">
-        Options Indexes FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
-</VirtualHost>
-```
-
-Ajouter à `/etc/hosts` :
-```
-127.0.0.1 googleform.local
-```
-
-#### 7. Vérifier l'installation
+#### 5. Vérifier l'installation
 - Accéder à la page de connexion
 - Créer un compte (Register)
 - Se connecter
@@ -2038,34 +1915,7 @@ fetch(url, options)
 
 #### Priorité haute
 
-**1. Tests automatisés**
-```php
-// PHPUnit pour backend
-class CreateSurveyTest extends TestCase {
-    public function testCreateSurveyWithValidData() {
-        // ... 
-    }
-    
-    public function testCreateSurveyWithoutAuth() {
-        // Doit retourner 401
-    }
-}
-```
-
-```javascript
-// Jest pour frontend
-describe('Questions rendering', () => {
-    test('should render textarea for text type', () => {
-        // ... 
-    });
-    
-    test('should render checkboxes for multiple type', () => {
-        // ...
-    });
-});
-```
-
-**2. Gestion des sessions PHP**
+**1. Gestion des sessions PHP**
 ```php
 // Remplacer localStorage par sessions serveur
 session_start();
@@ -2078,33 +1928,11 @@ $_SESSION['username'] = $user['username'];
 // - Expiration automatique
 ```
 
-**3. Rate limiting global**
-```php
-// Limiter toutes les API, pas seulement login
-class RateLimiter {
-    public static function check($identifier, $maxRequests = 100, $period = 60) {
-        // Redis ou table SQL
-        // Algorithme:  token bucket ou sliding window
-    }
-}
-```
-
-**4. Validation côté serveur renforcée**
-```php
-// Utiliser une bibliothèque de validation
-use Respect\Validation\Validator as v;
-
-$usernameValidator = v::alnum('_')->length(3, 30);
-if (!$usernameValidator->validate($username)) {
-    throw new InvalidArgumentException('Username invalide');
-}
-```
-
 ---
 
 #### Priorité moyenne
 
-**5. Notifications email**
+**2. Notifications email**
 ```php
 // Partage de sondage
 function notifyUserShared($userEmail, $formTitle, $accessType) {
@@ -2116,7 +1944,7 @@ function notifyUserShared($userEmail, $formTitle, $accessType) {
 }
 ```
 
-**6. Pagination des résultats**
+**3. Pagination des résultats**
 ```php
 // get_answer. php
 $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
@@ -2127,7 +1955,7 @@ $stmt = $pdo->prepare('SELECT ... LIMIT ?  OFFSET ?');
 $stmt->execute([$perPage, $offset]);
 ```
 
-**7. Système de templates**
+**4. Système de templates**
 ```php
 // Sondages pré-configurés
 $templates = [
@@ -2142,7 +1970,7 @@ $templates = [
 ];
 ```
 
-**8. Recherche avancée**
+**5. Recherche avancée**
 ```javascript
 // Recherche dans les sondages
 function searchSurveys(query) {
@@ -2157,7 +1985,7 @@ function searchSurveys(query) {
 
 #### Priorité basse
 
-**9. Dark mode**
+**6. Dark mode**
 ```css
 /* style.css */
 @media (prefers-color-scheme: dark) {
@@ -2173,7 +2001,7 @@ function searchSurveys(query) {
 }
 ```
 
-**10. Internationalisation (i18n)**
+**7. Internationalisation (i18n)**
 ```javascript
 // i18n.js
 const translations = {
@@ -2193,58 +2021,13 @@ function t(key) {
 }
 ```
 
-**11. PWA (Progressive Web App)**
-```javascript
-// service-worker.js
-self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches.open('gogoleform-v1').then((cache) => {
-            return cache.addAll([
-                '/html/index.html',
-                '/js/script.js',
-                '/style. css',
-            ]);
-        })
-    );
-});
-```
-
-**12. Analytics**
-```javascript
-// Tracking anonyme des usages
-function trackEvent(category, action, label) {
-    fetch('/php/analytics.php', {
-        method: 'POST',
-        body: JSON.stringify({ category, action, label })
-    });
-}
-
-// Exemples
-trackEvent('Survey', 'Created', surveyType);
-trackEvent('Question', 'Answered', questionType);
-```
-
 ---
 
 ## Dépannage (Troubleshooting)
 
 ### Problèmes courants
 
-#### 1. Erreur "Call to undefined function encryptData()"
-
-**Cause :** `config.php` non inclus
-
-**Solution :**
-```php
-// Ajouter en haut de chaque fichier PHP
-require_once 'config. php';
-// ou
-require_once __DIR__ . '/config.php';
-```
-
----
-
-#### 2. Données non déchiffrées (affichage "enc:v1:...")
+#### 1. Données non déchiffrées (affichage "enc:v1:...")
 
 **Cause :** Oubli d'appel à `decryptData()`
 
@@ -2258,7 +2041,7 @@ foreach ($results as &$item) {
 
 ---
 
-#### 3. Erreur CORS
+#### 2. Erreur CORS
 
 **Symptôme :**
 ```
@@ -2281,7 +2064,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 ---
 
-#### 4. Session localStorage perdue
+#### 3. Session localStorage perdue
 
 **Cause :** Changement de domaine ou effacement navigateur
 
@@ -2299,7 +2082,7 @@ if (!userId) {
 
 ---
 
-#### 5. Graphiques Chart.js ne s'affichent pas
+#### 4. Graphiques Chart.js ne s'affichent pas
 
 **Cause :** Canvas non trouvé ou données invalides
 
@@ -2321,7 +2104,7 @@ if (!answers || answers.length === 0) {
 
 ---
 
-#### 6. Migration chiffrement échoue
+#### 5. Migration chiffrement échoue
 
 **Symptôme :**
 ```
@@ -2342,7 +2125,7 @@ ALTER TABLE question MODIFY question_text TEXT;
 
 ---
 
-#### 7. Blocage anti-bruteforce permanent
+#### 6. Blocage anti-bruteforce permanent
 
 **Symptôme :** Impossible de se connecter même avec bon mot de passe
 
@@ -2393,130 +2176,8 @@ GROUP BY f.id;
 
 ---
 
-### Caching
 
-**Exemple simple avec APCu :**
-```php
-// Cache les sondages publics (10 minutes)
-function getSurveys() {
-    $cacheKey = 'public_surveys';
-    
-    if (apcu_exists($cacheKey)) {
-        return apcu_fetch($cacheKey);
-    }
-    
-    // Requête DB... 
-    $surveys = $stmt->fetchAll();
-    
-    apcu_store($cacheKey, $surveys, 600); // 10 minutes
-    return $surveys;
-}
 
-// Invalider le cache lors d'une création
-function createSurvey($data) {
-    // ...  insertion DB
-    apcu_delete('public_surveys');
-}
-```
-
----
-
-### Frontend
-
-**Lazy loading des images :**
-```html
-<img src="logo.png" loading="lazy" alt="Logo">
-```
-
-**Debouncing de la recherche :**
-```javascript
-let searchTimeout;
-usernameSearch.addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        renderAnswers(window.allQuestionsData, e.target.value);
-    }, 300); // Attendre 300ms après la dernière frappe
-});
-```
-
----
-
-## Conformité et légal
-
-### RGPD (GDPR)
-
-**Données personnelles collectées :**
-- Username (chiffré)
-- Email (chiffré)
-- Adresse IP (logs login_attempts)
-- Réponses aux sondages
-
-**À implémenter :**
-
-**1. Consentement explicite**
-```html
-<!-- register.html -->
-<div class="form-check">
-    <input type="checkbox" id="gdprConsent" required>
-    <label for="gdprConsent">
-        J'accepte le traitement de mes données personnelles 
-        (<a href="privacy.html">politique de confidentialité</a>)
-    </label>
-</div>
-```
-
-**2. Droit à l'oubli (suppression compte)**
-```php
-// delete_account.php
-function deleteUserAccount($userId) {
-    $pdo->beginTransaction();
-    
-    try {
-        // Anonymiser les réponses (garder stats)
-        $pdo->prepare('UPDATE answer SET user_id = NULL WHERE user_id = ?')
-            ->execute([$userId]);
-        
-        // Supprimer l'utilisateur
-        $pdo->prepare('DELETE FROM user WHERE id = ?')
-            ->execute([$userId]);
-        
-        // Supprimer les traces
-        $pdo->prepare('DELETE FROM login_attempts WHERE ip IN 
-                       (SELECT DISTINCT ip FROM login_log WHERE user_id = ? )')
-            ->execute([$userId]);
-        
-        $pdo->commit();
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        throw $e;
-    }
-}
-```
-
-**3. Export des données (portabilité)**
-```php
-// export_data.php
-function exportUserData($userId) {
-    // Récupérer toutes les données
-    $data = [
-        'user' => getUserInfo($userId),
-        'surveys_created' => getUserSurveys($userId),
-        'answers_given' => getUserAnswers($userId),
-    ];
-    
-    // Déchiffrer
-    foreach ($data as &$section) {
-        // decryptData recursif
-    }
-    
-    // Générer JSON
-    header('Content-Type: application/json');
-    header('Content-Disposition: attachment; filename="my_data.json"');
-    echo json_encode($data, JSON_PRETTY_PRINT);
-}
-```
-
----
 
 ## Licence et crédits
 
@@ -2565,13 +2226,10 @@ function exportUserData($userId) {
 - ⚠️ HTTPS recommandé en production
 
 **À venir :**
-- 🔲 Tests automatisés
 - 🔲 Sessions PHP (remplacer localStorage)
-- 🔲 Rate limiting global
 - 🔲 Notifications email
 - 🔲 Pagination
 - 🔲 Dark mode
-- 🔲 PWA
 
 ---
 
@@ -2671,52 +2329,6 @@ define('ENCRYPTION_KEY', $_ENV['GOOGLEFORM_ENCRYPTION_KEY']);
 
 ---
 
-### C. Scripts utiles
-
-**Backup automatique :**
-```bash
-#!/bin/bash
-# backup.sh
-
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/var/backups/googleform"
-DB_NAME="google-form"
-
-mkdir -p $BACKUP_DIR
-
-# Backup DB
-mysqldump -u root -p$DB_PASSWORD $DB_NAME | gzip > "$BACKUP_DIR/db_$DATE.sql.gz"
-
-# Backup fichiers
-tar -czf "$BACKUP_DIR/files_$DATE.tar.gz" /var/www/google-form
-
-# Garder seulement les 30 derniers jours
-find $BACKUP_DIR -type f -mtime +30 -delete
-
-echo "Backup terminé:  $DATE"
-```
-
-**Monitoring :**
-```bash
-#!/bin/bash
-# healthcheck.sh
-
-# Vérifier que le site répond
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/google-form/html/index.html)
-
-if [ $STATUS -ne 200 ]; then
-    echo "ALERTE: Site down (HTTP $STATUS)"
-    # Envoyer email/notification
-fi
-
-# Vérifier MySQL
-mysql -u root -p$DB_PASSWORD -e "SELECT 1" > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-    echo "ALERTE: MySQL down"
-fi
-```
-
----
 
 **Fin de la documentation technique**
 
