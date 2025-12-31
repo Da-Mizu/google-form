@@ -29,40 +29,40 @@ function renderNavbarUserActions() {
             navbar.appendChild(navbarCenter);
         }
         
-        // Bouton Create (sauf sur la page de création)
+        // Bouton Créer (sauf sur la page de création)
         if (!window.location.pathname.includes('create_survey.html')) {
             const createBtn = document.createElement('a');
             createBtn.className = 'btn btn-success ms-2';
-            createBtn.textContent = 'Create';
+            createBtn.textContent = 'Créer un sondage';
             createBtn.href = 'create_survey.html';
             navbar.appendChild(createBtn);
         }
 
-        // Bouton Share (sauf sur la page de partage)
+        // Bouton Partager (sauf sur la page de partage)
         if (!window.location.pathname.includes('share_survey.html')) {
             const shareBtn = document.createElement('a');
             shareBtn.className = 'btn btn-warning ms-2 text-dark';
-            shareBtn.textContent = 'Share';
+            shareBtn.textContent = 'Partager';
             shareBtn.href = 'share_survey.html';
             navbar.appendChild(shareBtn);
         }
         
-        // Bouton Logout
+        // Bouton Déconnexion
         const logoutBtn = document.createElement('button');
         logoutBtn.className = 'btn btn-outline-light ms-2';
-        logoutBtn.textContent = 'Logout';
+        logoutBtn.textContent = 'Déconnexion';
         logoutBtn.onclick = logout;
         navbar.appendChild(logoutBtn);
     } else {
         // Utilisateur non connecté
         const registerBtn = document.createElement('a');
         registerBtn.className = 'btn btn-outline-light ms-2';
-        registerBtn.textContent = 'Register';
+        registerBtn.textContent = 'Inscription';
         registerBtn.href = 'register.html';
         
         const loginBtn = document.createElement('a');
         loginBtn.className = 'btn btn-light ms-2';
-        loginBtn.textContent = 'Login';
+        loginBtn.textContent = 'Connexion';
         loginBtn.href = 'index.html';
         
         navbar.appendChild(registerBtn);

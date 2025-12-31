@@ -310,7 +310,12 @@ function downloadCSV() {
     
     window.allQuestionsData.forEach((question, qIndex) => {
         csv += `Question ${qIndex + 1}: ${question.question_text}\n`;
-        csv += `Type: ${question.type === 'multiple' ? 'Choix multiple' : 'Texte'}\n`;
+        const typeLabel = question.type === 'multiple'
+            ? 'Choix multiple'
+            : question.type === 'scale'
+                ? 'Échelle (0-10)'
+                : 'Texte libre';
+        csv += `Type: ${typeLabel}\n`;
         csv += `Anonyme: ${question.anonymus == 1 ? 'Oui' : 'Non'}\n`;
         csv += `Utilisateur,Réponse,Date\n`;
         
@@ -357,7 +362,13 @@ function downloadPDF() {
             <div style="margin-bottom: 30px; page-break-inside: avoid;">
                 <h2 style="font-size: 16px; margin-bottom: 10px;">Question ${qIndex + 1}: ${question.question_text}</h2>
                 <p style="margin: 5px 0; font-size: 12px;">
-                    <strong>Type:</strong> ${question.type === 'multiple' ? 'Choix multiple' : 'Texte'} | 
+                    <strong>Type:</strong> ${
+                        question.type === 'multiple'
+                            ? 'Choix multiple'
+                            : question.type === 'scale'
+                                ? 'Échelle (0-10)'
+                                : 'Texte libre'
+                    } | 
                     <strong>Anonyme:</strong> ${question.anonymus == 1 ? 'Oui' : 'Non'}
                 </p>
         `;

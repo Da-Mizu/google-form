@@ -51,9 +51,14 @@ async function fetchShares(formId) {
             item.className = 'list-group-item d-flex justify-content-between align-items-center';
             const left = document.createElement('div');
             left.innerHTML = `<strong>${access.username}</strong> <span class="text-muted">(${access.email || 'sans email'})</span>`;
+            const accessLabel = {
+                answer: 'Répondre',
+                view: 'Voir les réponses',
+                admin: 'Admin'
+            }[access.access_type] || access.access_type;
             const badge = document.createElement('span');
             badge.className = 'badge bg-secondary me-3';
-            badge.textContent = access.access_type;
+            badge.textContent = accessLabel;
 
             const btn = document.createElement('button');
             btn.className = 'btn btn-sm btn-outline-danger';
