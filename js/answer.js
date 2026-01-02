@@ -313,14 +313,18 @@ function downloadCSV() {
                 : 'Texte libre';
         csv += `Type: ${typeLabel}\n`;
         csv += `Anonyme: ${question.anonymus == 1 ? 'Oui' : 'Non'}\n`;
-        csv += `Utilisateur,Réponse,Date\n`;
+        csv += question.anonymus == 1 ? `Utilisateur,Réponse\n` : `Utilisateur,Réponse,Date\n`;
         
         if (question.answers && question.answers.length > 0) {
             question.answers.forEach(answer => {
                 const username = answer.username || 'Anonyme';
                 const answerText = (answer.answer_text || '').replace(/,/g, ';');
                 const date = new Date(answer.answered_at).toLocaleString('fr-FR');
-                csv += `"${username}","${answerText}","${date}"\n`;
+                if (answer.user_masked) {
+                    csv += `"Anonyme","${answerText}"\n`;
+                } else {
+                    csv += `"${username}","${answerText}","${date}"\n`;
+                }
             });
         }
         csv += `\n`;
@@ -374,7 +378,9 @@ function downloadPDF() {
             html += '<tr style="background-color: #f0f0f0;">';
             html += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Utilisateur</th>';
             html += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Réponse</th>';
-            html += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th>';
+            if (question.anonymus != 1) {
+                html += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th>';
+            }
             html += '</tr>';
             
             question.answers.forEach(answer => {
@@ -382,9 +388,11 @@ function downloadPDF() {
                 const answerText = answer.answer_text || '-';
                 const date = new Date(answer.answered_at).toLocaleString('fr-FR');
                 html += '<tr>';
-                html += `<td style="border: 1px solid #ddd; padding: 8px;">${username}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${answer.user_masked ? 'Anonyme' : username}</td>`;
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${answerText}</td>`;
-                html += `<td style="border: 1px solid #ddd; padding: 8px; font-size: 12px;">${date}</td>`;
+                if (question.anonymus != 1) {
+                    html += `<td style="border: 1px solid #ddd; padding: 8px; font-size: 12px;">${date}</td>`;
+                }
                 html += '</tr>';
             });
             html += '</table>';
