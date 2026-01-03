@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1
--- Généré le : lun. 22 déc. 2025 à 20:35
+-- Généré le : sam. 03 jan. 2026 à 19:26
 -- Version du serveur : 10.4.32-MariaDB
 -- Version de PHP : 8.2.12
 
@@ -35,20 +35,6 @@ CREATE TABLE `answer` (
   `answered_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Déchargement des données de la table `answer`
---
-
-INSERT INTO `answer` (`id`, `question_id`, `user_id`, `answer_text`, `answered_at`) VALUES
-(1, 1, 1, 'caca', '2025-12-22 19:55:29'),
-(2, 2, 1, '123456', '2025-12-22 19:56:02'),
-(4, 4, 1, 'ds', '2025-12-22 20:05:39'),
-(5, 5, 1, 'ds', '2025-12-22 20:05:39'),
-(6, 6, 1, 'ds', '2025-12-22 20:05:39'),
-(7, 7, 1, 'hghfg', '2025-12-22 20:07:40'),
-(8, 8, 2, 'test', '2025-12-22 20:29:13'),
-(9, 9, 2, 'pipi', '2025-12-22 20:31:29');
-
 -- --------------------------------------------------------
 
 --
@@ -61,14 +47,6 @@ CREATE TABLE `form` (
   `description` text DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Déchargement des données de la table `form`
---
-
-INSERT INTO `form` (`id`, `title`, `description`, `user_id`) VALUES
-(6, 'caca', '', 1),
-(7, 'test1', '', 1);
 
 -- --------------------------------------------------------
 
@@ -97,14 +75,6 @@ CREATE TABLE `question` (
   `anonymus` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Déchargement des données de la table `question`
---
-
-INSERT INTO `question` (`id`, `form_id`, `question_text`, `type`, `anonymus`) VALUES
-(8, 6, 'caca', 'text', 0),
-(9, 7, 'caca', 'multiple', 1);
-
 -- --------------------------------------------------------
 
 --
@@ -116,14 +86,6 @@ CREATE TABLE `question_option` (
   `question_id` int(11) NOT NULL,
   `option_text` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Déchargement des données de la table `question_option`
---
-
-INSERT INTO `question_option` (`id`, `question_id`, `option_text`) VALUES
-(3, 9, 'caca'),
-(4, 9, 'pipi');
 
 -- --------------------------------------------------------
 
@@ -138,14 +100,6 @@ CREATE TABLE `survey_access` (
   `access_type` enum('view','answer','admin') NOT NULL DEFAULT 'answer'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Déchargement des données de la table `survey_access`
---
-
-INSERT INTO `survey_access` (`id`, `form_id`, `user_id`, `access_type`) VALUES
-(3, 6, 2, 'view'),
-(4, 7, 2, 'view');
-
 -- --------------------------------------------------------
 
 --
@@ -158,14 +112,6 @@ CREATE TABLE `user` (
   `password` varchar(255) NOT NULL,
   `email` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Déchargement des données de la table `user`
---
-
-INSERT INTO `user` (`id`, `username`, `password`, `email`) VALUES
-(1, 'admin', '$2y$10$LTlleDkisKFgKcuChl..9uhM/VNLu36vqh/rUoBp1XgdpfFkupvRe', 'admin@gmail.com'),
-(2, 'damizu', '$2y$10$CWd.HUfrSdGlkIhD08nlnO7czE5hIasZ5aBZSZ/CnRwOO5EQs/fhe', 'theo.vic@outlook.fr');
 
 --
 -- Index pour les tables déchargées
@@ -228,37 +174,37 @@ ALTER TABLE `user`
 -- AUTO_INCREMENT pour la table `answer`
 --
 ALTER TABLE `answer`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT pour la table `form`
 --
 ALTER TABLE `form`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT pour la table `question`
 --
 ALTER TABLE `question`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT pour la table `question_option`
 --
 ALTER TABLE `question_option`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT pour la table `survey_access`
 --
 ALTER TABLE `survey_access`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT pour la table `user`
 --
 ALTER TABLE `user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- Contraintes pour les tables déchargées
